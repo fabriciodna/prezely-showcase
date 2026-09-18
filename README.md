@@ -1,14 +1,14 @@
 # Prezely
 
-**Gestão de compras, estoque e operação comercial em um único fluxo.**
+Sistema de gestão comercial com foco em **cotação de fornecedores, compras e estoque**.
 
-O Prezely é um projeto pessoal que estou desenvolvendo para resolver um problema que aparece muito em pequenos comércios e distribuidoras: comparar cotações de vários fornecedores sem depender de planilhas e sem precisar lançar a mesma informação várias vezes.
+![Tela inicial do Prezely](assets/inicio.webp)
 
-A parte central do sistema é a comparação de fornecedores. A partir dela, a compra pode seguir para pedido, recebimento, estoque e financeiro.
+## Por que comecei esse projeto
 
-## O problema
+Comecei o Prezely por um problema bem prático: receber preços de vários fornecedores e descobrir o que realmente vale a pena comprar.
 
-Na prática, cada fornecedor descreve o mesmo produto de um jeito:
+Quando são poucos itens, uma planilha resolve. Quando entram dezenas de produtos, fornecedores diferentes e descrições como estas, a comparação começa a dar trabalho:
 
 ```text
 Coca Cola Lata 350
@@ -16,122 +16,88 @@ Coca-Cola Original 350ml
 COCA LT 350ML
 ```
 
-Comparar isso manualmente fica lento conforme aumentam a quantidade de produtos e fornecedores.
+A ideia do projeto é organizar essa etapa e fazer a informação continuar pelo sistema, em vez de terminar em uma planilha.
 
-O Prezely tenta reconhecer quando essas descrições representam o mesmo SKU, organiza as ofertas e mostra a melhor condição de compra sem misturar produtos diferentes.
+## Cotações
 
-## Principais áreas
+O sistema importa as propostas, tenta identificar quais linhas representam o mesmo produto e compara os preços entre os fornecedores.
 
-### Cotações
+Na revisão, cada produto aparece no fornecedor que venceu naquele item. Casos realmente duvidosos continuam separados para conferência, em vez de serem agrupados à força.
 
-Importação de propostas, comparação entre fornecedores e definição do melhor preço por produto.
+![Revisão de uma cotação no Prezely](assets/cotacoes.webp)
 
-### Produtos
+A cotação pode seguir para pedidos de compra separados por fornecedor. Quando a mercadoria é recebida, o fluxo atualiza estoque, histórico de custo e contas a pagar.
 
-Cadastro de produtos, histórico de custo, preço de venda e acompanhamento de margem.
+## Estoque
 
-### Estoque
+O estoque é controlado por movimentações. Eu preferi não trabalhar com um campo de saldo que pode ser simplesmente sobrescrito, porque depois fica difícil saber de onde aquele número veio.
 
-Controle por movimentações, com separação entre:
+O sistema mantém **físico, reservado e disponível** separados e registra entradas, saídas, balanços e reservas feitas por pedidos.
 
-- saldo físico;
-- quantidade reservada;
-- saldo disponível;
-- estoque mínimo;
-- histórico de entradas, saídas e balanços.
+![Controle de estoque do Prezely](assets/estoque.webp)
 
-### Compras
+Também há estoque mínimo, busca, filtros e histórico de movimentações.
 
-A cotação pode virar pedidos separados por fornecedor. O recebimento alimenta estoque, histórico de custo e contas a pagar.
+## O que já existe
 
-### Comercial
+- produtos, custos, preço de venda e margem;
+- fornecedores e rodadas de cotação;
+- importação e comparação de propostas;
+- matching de produtos entre fornecedores;
+- pedidos de compra e recebimento;
+- estoque físico, reservado e disponível;
+- clientes, oportunidades, tarefas e orçamentos;
+- pedidos de venda;
+- contas a pagar e receber;
+- recorrências e centros de custo;
+- importação de extrato CSV/OFX e conciliação;
+- permissões e trilha de auditoria por empresa.
 
-Clientes, contatos, oportunidades, tarefas, orçamentos e pedidos de venda.
-
-### Financeiro
-
-Contas a pagar e receber, recorrências, contas financeiras, importação de extratos CSV/OFX e conciliação.
-
-## Fluxos
+## Como os módulos se conectam
 
 ### Compra
 
 ```text
-Cotação
-   ↓
-Comparação
-   ↓
-Melhor fornecedor por produto
-   ↓
-Pedido de compra
-   ↓
-Recebimento
-   ├── Estoque
-   └── Contas a pagar
+Cotação → comparação → pedido de compra → recebimento → estoque → contas a pagar
 ```
 
 ### Venda
 
 ```text
-Cliente
-   ↓
-Oportunidade
-   ↓
-Orçamento
-   ↓
-Pedido
-   ↓
-Reserva de estoque
-   ↓
-Faturamento
-   └── Contas a receber
+Cliente → oportunidade → orçamento → pedido → reserva de estoque → faturamento → contas a receber
 ```
 
 ## Matching de produtos
 
-Essa é uma das partes mais específicas do projeto.
+Essa é a parte mais específica do Prezely.
 
-A identificação considera evidências como marca, linha, variante, sabor, embalagem, volume, retornabilidade, GTIN e aliases já conhecidos por fornecedor.
+A comparação não depende só do nome escrito pelo fornecedor. O processo usa informações como marca, linha, variante, sabor, embalagem, volume, retornabilidade, GTIN e aliases já confirmados.
 
-Busca semântica ajuda a encontrar candidatos, mas não é usada como autoridade final quando existem conflitos objetivos de identidade.
+A busca semântica ajuda a encontrar candidatos próximos. A decisão final continua sujeita às regras de identidade do produto; um candidato semanticamente parecido não deve vencer um conflito claro de volume, variante ou embalagem.
 
 ## Stack
 
-- TypeScript
-- React
-- PostgreSQL
-- Kysely
-- TanStack Query
-- Zod
-- SuperJSON
-- Papa Parse / XLSX
-- embeddings para recuperação semântica
-- Floot como ambiente de desenvolvimento e infraestrutura
+**TypeScript · React · PostgreSQL · Kysely · TanStack Query · Zod · SuperJSON · Papa Parse · XLSX**
 
-## Algumas decisões do projeto
+Também uso embeddings na recuperação de candidatos para o matching de produtos. O projeto é desenvolvido no Floot.
 
-- isolamento dos dados por empresa;
-- estoque derivado de movimentações em vez de um saldo sobrescrito;
-- reserva de estoque separada do saldo físico;
-- integrações externas desacopladas das regras de negócio;
-- idempotência em fluxos que podem ser repetidos;
-- confirmação humana preservada quando a identidade de um produto realmente é ambígua.
+## Algumas decisões técnicas
 
-Mais detalhes estão em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+O sistema é multiempresa e o escopo da empresa é validado no backend. O estoque parte de um histórico de movimentações, operações que podem ser repetidas usam controles de idempotência e as integrações externas ficam atrás de providers próprios.
+
+A visão resumida da arquitetura está em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Status
 
-O projeto está em desenvolvimento ativo.
+O Prezely continua em desenvolvimento.
 
-Neste momento, o foco está em simplificar a experiência de uso e consolidar estoque, compras, vendas e financeiro. A estrutura para fiscal e cobranças já existe, mas permanece em modo simulado enquanto não há um provedor externo contratado.
+O foco atual está na experiência de uso e na consolidação dos fluxos de compras, estoque, vendas e financeiro. Fiscal e cobranças estão preparados estruturalmente, mas permanecem em modo simulado enquanto não há integração externa contratada.
 
 ## Código-fonte
 
-Este repositório é apenas a apresentação pública do projeto.
-
-O código-fonte completo permanece privado.
+Este repositório é somente a apresentação pública do projeto. O código-fonte completo permanece privado.
 
 ## Autor
 
 **Fabrício Dantas**  
-GitHub: [@fabriciodna](https://github.com/fabriciodna)
+[@fabriciodna](https://github.com/fabriciodna)
