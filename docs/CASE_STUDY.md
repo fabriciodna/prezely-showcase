@@ -1,87 +1,63 @@
-# Estudo de caso técnico — Prezely
+# Prezely: da cotação ao pedido de compra
 
-> Projeto pessoal de Fabrício Dantas, em desenvolvimento. Este documento apresenta decisões técnicas em alto nível; a implementação permanece em repositório privado.
+Este é um relato das decisões que estou tomando no desenvolvimento do Prezely. O projeto ainda está em andamento; aqui mostro a lógica por trás de algumas partes, sem abrir o código-fonte ou expor dados de fornecedores.
 
-## 1. Problema
+## De onde veio a ideia
 
-Pequenos comércios e distribuidoras recebem cotações de vários fornecedores, muitas vezes com descrições diferentes para produtos equivalentes. Comparar manualmente preço, embalagem e variação de produto dificulta a decisão de compra e cria retrabalho ao atualizar estoque e financeiro.
+Trabalhar com compras me colocou diante de uma tarefa recorrente: receber listas de preços de vários fornecedores, conferir os produtos e decidir onde comprar cada item.
 
-## 2. Solução
+O menor preço escrito em uma linha nem sempre é o menor preço do **produto certo**. Se uma lista fala em unidade e outra em fardo, ou se duas descrições escondem volumes diferentes, comparar os números diretamente pode levar a uma decisão errada.
 
-O Prezely conecta o processo de cotação ao restante da operação:
+Comecei o Prezely para organizar essa comparação. Depois passei a conectar a cotação com pedidos, recebimento, estoque e financeiro — justamente para não precisar registrar a mesma informação em vários lugares.
+
+## O desafio dos nomes de produtos
+
+Uma das dificuldades foi reconhecer o mesmo item em listas que usam abreviações e descrições diferentes.
+
+Um exemplo simplificado:
 
 ```text
-Cotações recebidas
-       ↓
-Normalização e busca de produtos equivalentes
-       ↓
-Comparação de ofertas por produto
-       ↓
-Pedidos de compra por fornecedor
-       ↓
-Recebimento, estoque e contas a pagar
+Fornecedor A: Coca Cola Lata 350
+Fornecedor B: COCA LT 350ML
+Fornecedor C: Coca-Cola Original 350ml
 ```
 
-Há também funcionalidades de vendas, clientes e contas a receber. A parte fiscal e de cobranças utiliza **providers simulados** no estágio atual, não integrações financeiras ou fiscais definitivas.
+Não basta escolher o texto mais parecido. É preciso considerar marca, variante, volume, embalagem, retornabilidade e outros atributos quando estiverem disponíveis.
 
-## 3. Tecnologias utilizadas
+A abordagem do projeto combina essas informações com nomes já confirmados para cada fornecedor. A similaridade semântica serve para encontrar possíveis correspondências; ela não deve passar por cima de um conflito claro de volume ou embalagem.
 
-- **TypeScript e React** para a interface e os fluxos de utilização.
-- **PostgreSQL e Kysely** para persistência e acesso a dados.
-- **TanStack Query, Zod e SuperJSON** para comunicação, validação e tratamento de dados.
-- **Papa Parse e XLSX** para trabalhar com formatos de importação.
-- **Embeddings** como apoio à recuperação de candidatos na comparação de produtos.
-- **Floot** como ambiente de desenvolvimento e infraestrutura.
+Quando não existe segurança suficiente para agrupar, é melhor deixar o caso para conferência do que misturar produtos diferentes e apresentar uma economia que não existe.
 
-## 4. Decisões de engenharia
+## O estoque precisava contar uma história
 
-### Identidade de produtos antes de similaridade
+Outro cuidado foi não tratar o estoque como um campo numérico que qualquer operação simplesmente substitui.
 
-Produtos podem ter descrições distintas, mas precisam ser comparados conforme atributos relevantes, como marca, variante, sabor, embalagem, volume e GTIN. A busca semântica ajuda a encontrar candidatos; ela não deve ignorar conflitos explícitos desses atributos.
+O sistema registra movimentações como entradas, saídas e ajustes. Isso permite reconstruir de onde veio uma alteração de saldo. Reservas de pedidos são acompanhadas à parte, para distinguir:
 
-**Motivo:** um texto parecido não garante que dois itens sejam equivalentes para uma compra.
+- **Físico:** quantidade registrada como presente no estoque.
+- **Reservado:** quantidade comprometida com pedidos.
+- **Disponível:** quantidade física menos as reservas ativas.
 
-### Estoque baseado em movimentações
+Reservar um produto reduz o disponível, mas não significa que ele já saiu fisicamente.
 
-O saldo deriva de entradas, saídas, ajustes e reservas, em vez de depender apenas de um número editável. O sistema diferencia saldo físico, reservado e disponível.
+## Uma cotação não termina na comparação
 
-**Motivo:** dar rastreabilidade às alterações e reduzir inconsistências entre pedidos e estoque.
+Depois de encontrar as ofertas escolhidas, o próximo passo é transformar a decisão em pedidos por fornecedor. No recebimento, os fluxos se relacionam com custo, estoque e contas a pagar.
 
-### Isolamento por empresa
+Isso trouxe uma preocupação adicional: repetir uma ação por engano não deveria criar vários pedidos iguais. Por isso, a geração de pedidos a partir de cotações utiliza controles de idempotência.
 
-As operações de leitura e escrita verificam o escopo da empresa no backend.
+O projeto também precisa separar dados entre empresas. O escopo da conta é validado nas operações de backend, em vez de depender apenas da interface para mostrar os registros corretos.
 
-**Motivo:** evitar cruzamento de dados entre contas de um sistema multiempresa.
+## Ferramentas e organização
 
-### Idempotência em operações de compra
+A interface utiliza **React e TypeScript**. Os dados ficam no **PostgreSQL**, com acesso por **Kysely**. Também utilizo **TanStack Query**, **Zod**, **SuperJSON**, **Papa Parse** e **XLSX** em partes de comunicação, validação e importação. O ambiente do projeto é o **Floot**.
 
-A geração de pedidos a partir de cotações aplica controles para evitar pedidos duplicados em reprocessamentos.
+A estrutura busca manter interface, regras de negócio, persistência e integrações externas separadas. Há uma [visão resumida da arquitetura](ARCHITECTURE.md), sem os detalhes proprietários da implementação.
 
-**Motivo:** impedir que repetição de uma ação produza registros operacionais duplicados.
+## O que ainda estou ajustando
 
-### Integrações desacopladas
+Meu foco agora é simplificar o uso e consolidar o caminho entre compras, estoque, vendas e financeiro. A parte fiscal e de cobranças ainda trabalha com providers simulados; integrações reais não devem ser confundidas com algo já entregue.
 
-As funções fiscais e de cobrança são separadas por interfaces de integração. Neste estágio, os providers correspondentes são simulados.
+Não há métricas públicas de adoção ou um ambiente de demonstração aberto neste repositório. Prefiro mostrar o problema, a abordagem e o estágio atual do projeto sem apresentar resultados que ainda não foram validados.
 
-**Motivo:** permitir evolução futura sem acoplar o domínio do sistema a um fornecedor externo específico.
-
-## 5. O que este projeto demonstra
-
-- Modelagem de fluxos comerciais completos e regras de negócio.
-- Desenvolvimento de interfaces e comunicação com serviços.
-- Tratamento de dados estruturados e importação de arquivos.
-- Persistência relacional e separação de responsabilidades.
-- Cuidados com segurança e isolamento multiempresa.
-- Avaliação de correspondência entre produtos com critérios além da similaridade textual.
-
-## 6. Estado atual e limites
-
-O Prezely está em desenvolvimento ativo. A experiência de uso e a consistência dos fluxos de compras, estoque, vendas e financeiro continuam em evolução.
-
-Este repositório é **apenas uma apresentação pública**: não oferece o código-fonte completo, nem um ambiente de demonstração com acesso autorizado. Não são apresentados indicadores de desempenho ou alegações de uso comercial que não tenham sido documentados e validados.
-
-Para conhecer as telas e os recursos existentes, consulte o [README principal](../README.md) e o [resumo da arquitetura](ARCHITECTURE.md).
-
----
-
-**Autor:** [Fabrício Dantas](https://github.com/fabriciodna)
+[Voltar à apresentação do Prezely](../README.md) · [Meu GitHub](https://github.com/fabriciodna)
