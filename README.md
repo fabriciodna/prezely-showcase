@@ -87,6 +87,10 @@ O sistema é multiempresa e o escopo da empresa é validado no backend. O estoqu
 
 A visão resumida da arquitetura está em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Estudo de caso para recrutadores
+
+Documentei o problema, a arquitetura em alto nível e as principais decisões de engenharia em um [estudo de caso técnico](docs/CASE_STUDY.md). O material explica o raciocínio por trás da comparação de fornecedores, do estoque por movimentações e do isolamento por empresa, sem expor código proprietário.
+
 ## Status
 
 O Prezely continua em desenvolvimento.
