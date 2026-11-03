@@ -2,7 +2,18 @@
 
 Sistema de gestão comercial com foco em **cotação de fornecedores, compras e estoque**.
 
-![Tela inicial do Prezely](https://app.prezely.com.br/_cdn/static/45674086-03a6-4ee1-9765-d6fef8fb9d57-showcase-home-fixed.webp)
+### Visão dos módulos
+
+```mermaid
+flowchart LR
+    A["Cotações"] --> B["Compras"]
+    B --> C["Estoque"]
+    C --> D["Vendas"]
+    B --> E["Financeiro"]
+    D --> E
+```
+
+*Diagrama simplificado dos módulos. Não é uma captura de tela da aplicação.*
 
 ## Por que comecei esse projeto
 
@@ -24,7 +35,17 @@ O sistema importa as propostas, tenta identificar quais linhas representam o mes
 
 Na revisão, cada produto aparece no fornecedor que venceu naquele item. Casos realmente duvidosos continuam separados para conferência, em vez de serem agrupados à força.
 
-![Revisão de uma cotação no Prezely](https://app.prezely.com.br/_cdn/static/8742c4e4-0ed3-4769-948a-5f989f2dc9b1-showcase-cotacoes-fixed.webp)
+```mermaid
+flowchart LR
+    A["Arquivos de fornecedores"] --> B["Normalização das ofertas"]
+    B --> C{"Produtos equivalentes?"}
+    C -->|Sim| D["Comparar preços"]
+    C -->|Dúvida| E["Conferência"]
+    E --> D
+    D --> F["Melhor oferta por item"]
+```
+
+*Representação do fluxo de cotações; imagens reais da interface ainda precisam ser adicionadas.*
 
 A cotação pode seguir para pedidos de compra separados por fornecedor. Quando a mercadoria é recebida, o fluxo atualiza estoque, histórico de custo e contas a pagar.
 
@@ -34,7 +55,15 @@ O estoque é controlado por movimentações. Eu preferi não trabalhar com um ca
 
 O sistema mantém **físico, reservado e disponível** separados e registra entradas, saídas, balanços e reservas feitas por pedidos.
 
-![Controle de estoque do Prezely](https://app.prezely.com.br/_cdn/static/4fd8b1ba-2a54-4281-9b9e-57caa4165a3a-showcase-estoque-fixed.webp)
+```mermaid
+flowchart TD
+    A["Movimentações registradas"] --> B["Saldo físico"]
+    B --> C["Reservas de pedidos"]
+    C --> D["Saldo disponível"]
+    A --> E["Histórico e rastreabilidade"]
+```
+
+*Diagrama conceitual do estoque; não é uma captura de tela.*
 
 Também há estoque mínimo, busca, filtros e histórico de movimentações.
 
